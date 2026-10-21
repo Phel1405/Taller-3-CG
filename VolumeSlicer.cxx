@@ -18,6 +18,10 @@
 #include <vtkRenderWindowInteractor.h>
 #include <vtkVolume.h>
 #include <vtkVolumeProperty.h>
+#include <vtkOutlineFilter.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkActor.h>
+#include <vtkProperty.h>
 
 int main( int argc, char** argv )
 {
@@ -47,6 +51,8 @@ int main( int argc, char** argv )
     std::cerr << "Could not read file: " << vp_filename << std::endl;
     return( EXIT_FAILURE );
   } // end if
+  
+  vtkNew< vtkNamedColors > colors;
 
   // Create volume raycasting properties
   vtkNew< vtkColorTransferFunction > volume_color;
@@ -126,6 +132,20 @@ int main( int argc, char** argv )
   // Read a 3D image (volume)
   vtkNew< vtkMetaImageReader > volume_reader;
   volume_reader->SetFileName( argv[ 1 ] );
+  
+  // caja envolvente
+  vtkNew< vtkOutlineFilter > outline;
+  outline->SetInputConnection( volume_reader->GetOutputPort( ) );
+  
+  // mapper 
+  vtkNew< vtkPolyDataMapper > mapper;
+  mapper->SetInputConnection( outline->GetOutputPort( ) );
+  
+  // actor
+  vtkNew< vtkActor > actor;
+  actor->SetMapper( mapper );
+  actor->GetProperty( )->SetColor( colors->GetColor3d( "Crimson" ).GetData() );
+  //actor->GetProperty( )->SetLineWidth( 0.7 );
 
   // Prepare ray-caster
   vtkNew< vtkFixedPointVolumeRayCastMapper > volume_mapper;
@@ -156,6 +176,7 @@ int main( int argc, char** argv )
 
   // Add actors
   ren->AddViewProp( volume );
+  ren->AddActor( actor );
 
   // Finish setup and start main loop
   win->SetSize( 800, 800 );
