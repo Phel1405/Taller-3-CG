@@ -22,6 +22,8 @@
 #include <vtkPolyDataMapper.h>
 #include <vtkActor.h>
 #include <vtkProperty.h>
+#include <vtkPlaneWidget.h>
+#include <vtkPlane.h>
 
 int main( int argc, char** argv )
 {
@@ -144,7 +146,7 @@ int main( int argc, char** argv )
   // actor
   vtkNew< vtkActor > actor;
   actor->SetMapper( mapper );
-  actor->GetProperty( )->SetColor( colors->GetColor3d( "Crimson" ).GetData() );
+  actor->GetProperty( )->SetColor( colors->GetColor3d( "Red" ).GetData() );
   //actor->GetProperty( )->SetLineWidth( 0.7 );
 
   // Prepare ray-caster
@@ -167,12 +169,25 @@ int main( int argc, char** argv )
   vtkNew< vtkRenderer > ren;
   vtkNew< vtkRenderWindow > win;
   vtkNew< vtkRenderWindowInteractor > iren;
+  
+  // plane
+  volume_reader->Update();
+  
+  vtkNew< vtkPlaneWidget > plane_widget;
+  plane_widget->SetInteractor( iren );
+  plane_widget->SetInputConnection( volume_reader->GetOutputPort() );
+  plane_widget->PlaceWidget();
+  
+  
+  vtkNew< vtkPlane > plane;
 
   style->SetCurrentStyleToTrackballCamera( );
   ren->SetBackground( 0.7, 0.7, 0.7 );
   win->AddRenderer( ren );
   iren->SetRenderWindow( win );
   iren->SetInteractorStyle( style );
+  
+  plane_widget->On();
 
   // Add actors
   ren->AddViewProp( volume );
