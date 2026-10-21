@@ -22,8 +22,11 @@
 #include <vtkPolyDataMapper.h>
 #include <vtkActor.h>
 #include <vtkProperty.h>
+
 #include <vtkPlaneWidget.h>
 #include <vtkPlane.h>
+#include <vtkClipVolume.h>
+#include <vtkDataSetMapper.h>
 
 int main( int argc, char** argv )
 {
@@ -53,7 +56,7 @@ int main( int argc, char** argv )
     std::cerr << "Could not read file: " << vp_filename << std::endl;
     return( EXIT_FAILURE );
   } // end if
-  
+
   vtkNew< vtkNamedColors > colors;
 
   // Create volume raycasting properties
@@ -134,19 +137,19 @@ int main( int argc, char** argv )
   // Read a 3D image (volume)
   vtkNew< vtkMetaImageReader > volume_reader;
   volume_reader->SetFileName( argv[ 1 ] );
-  
+
   // caja envolvente
   vtkNew< vtkOutlineFilter > outline;
   outline->SetInputConnection( volume_reader->GetOutputPort( ) );
-  
-  // mapper 
+
+  // mapper
   vtkNew< vtkPolyDataMapper > mapper;
   mapper->SetInputConnection( outline->GetOutputPort( ) );
-  
+
   // actor
-  vtkNew< vtkActor > actor;
-  actor->SetMapper( mapper );
-  actor->GetProperty( )->SetColor( colors->GetColor3d( "Red" ).GetData() );
+  vtkNew< vtkActor > boxActor;
+  boxActor->SetMapper( mapper );
+  boxActor->GetProperty( )->SetColor( colors->GetColor3d( "Red" ).GetData() );
   //actor->GetProperty( )->SetLineWidth( 0.7 );
 
   // Prepare ray-caster
@@ -169,16 +172,17 @@ int main( int argc, char** argv )
   vtkNew< vtkRenderer > ren;
   vtkNew< vtkRenderWindow > win;
   vtkNew< vtkRenderWindowInteractor > iren;
-  
+
   // plane
   volume_reader->Update();
-  
+
   vtkNew< vtkPlaneWidget > plane_widget;
   plane_widget->SetInteractor( iren );
   plane_widget->SetInputConnection( volume_reader->GetOutputPort() );
   plane_widget->PlaceWidget();
-  
-  
+
+  plane_widget->On();
+
   vtkNew< vtkPlane > plane;
 
   style->SetCurrentStyleToTrackballCamera( );
@@ -186,12 +190,24 @@ int main( int argc, char** argv )
   win->AddRenderer( ren );
   iren->SetRenderWindow( win );
   iren->SetInteractorStyle( style );
-  
-  plane_widget->On();
+
+
+  // Volume clipper
+  vtkNew< vtkClipVolume > clipper;
+
+  clipper->SetInputConnection(volume_reader->GetOutputPort());
+  clipper->SetClipFunction(plane);
+
+  vtkNew< vtkDataSetMapper > clipMapper;
+  clipMapper->SetInputConnection(clipper->GetOutputPort());
+
+  vtkNew< vtkActor > clipActor;
+  clipActor->SetMapper(clipMapper);
 
   // Add actors
   ren->AddViewProp( volume );
-  ren->AddActor( actor );
+  ren->AddActor( boxActor );
+  ren->AddActor( clipActor );
 
   // Finish setup and start main loop
   win->SetSize( 800, 800 );
